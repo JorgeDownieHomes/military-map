@@ -262,16 +262,22 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
         <!-- GitHub URL config -->
         <div id="ed-config">
           <b>&#128279; GitHub Connection</b>
-          Connect once with your GitHub token to publish changes directly. Your token is only stored in this browser session.
-          <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
-            <label style="font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px">GitHub Personal Access Token</label>
-            <div style="display:flex;gap:6px">
-              <input type="password" id="ed-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;height:32px;padding:0 9px;border:1.5px solid #ffc107;border-radius:7px;font-size:12px;color:#1a1a2e;outline:none;background:#fff">
-              <button id="ed-token-save" style="height:32px;padding:0 12px;background:#2a7676;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Connect</button>
+          Connect your GitHub token once to publish changes live. Stored in this browser session only.
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data URL (read-only)</label>
+              <input type="text" id="ed-gh-url" readonly style="width:100%;height:30px;padding:0 8px;border:1px solid #ffc107;border-radius:7px;font-size:10.5px;color:#666;background:#fffbea;outline:none">
             </div>
-            <div id="ed-token-status" style="font-size:11px;color:#856404;min-height:16px"></div>
+            <div>
+              <label style="display:block;font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Personal Access Token</label>
+              <div style="display:flex;gap:6px">
+                <input type="password" id="ed-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;height:32px;padding:0 9px;border:1.5px solid #ffc107;border-radius:7px;font-size:12px;color:#1a1a2e;outline:none;background:#fff">
+                <button id="ed-token-save" style="height:32px;padding:0 12px;background:#2a7676;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Connect</button>
+              </div>
+            </div>
+            <div id="ed-token-status" style="font-size:11px;min-height:16px"></div>
             <div style="font-size:11px;color:#a07000;line-height:1.5">
-              &#8505; Get a token: <strong>github.com &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic)</strong>. Give it <strong>repo</strong> scope.
+              &#8505; <strong>github.com &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic)</strong> &rarr; give it <strong>repo</strong> scope.
             </div>
           </div>
         </div>
