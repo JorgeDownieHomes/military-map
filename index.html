@@ -103,6 +103,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 #ed-hdr{background:#1a1a2e;color:#fff;height:54px;padding:0 18px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 #ed-hdr-t{font-size:15px;font-weight:600;flex:1}
 #ed-badge{background:#2a7676;color:#fff;border-radius:6px;padding:2px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+#ed-publish{background:#2a9d8f;color:#fff;border:none;border-radius:7px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(42,157,143,.4)}
+#ed-publish:hover{background:#21867a}
+#ed-publish:disabled{opacity:.5;cursor:not-allowed}
 #ed-export{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:7px;padding:7px 11px;font-size:12px;cursor:pointer;white-space:nowrap}
 #ed-export:hover{background:rgba(255,255,255,.22)}
 #ed-import-lbl{background:rgba(255,255,255,.12);color:#fff;border-radius:7px;padding:7px 11px;font-size:12px;cursor:pointer;white-space:nowrap}
@@ -241,6 +244,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
   <div id="ed-hdr">
     <div id="ed-hdr-t">Base Data Editor</div>
     <span id="ed-badge">ADMIN</span>
+    <button id="ed-publish">&#9650; Publish to GitHub</button>
     <button id="ed-export">&#8681; Export JSON</button>
     <label id="ed-import-lbl">&#8679; Import JSON<input type="file" id="ed-import-input" accept=".json" style="display:none"></label>
     <button id="ed-logout">Sign Out</button>
@@ -257,12 +261,19 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 
         <!-- GitHub URL config -->
         <div id="ed-config">
-          <b>&#128279; GitHub Data URL</b>
-          Your live data URL is shown below. To change it for this session, paste a new URL and click <strong>Load</strong>. To make it permanent, edit <code>DEFAULT_GH_URL</code> in the HTML file.
-          <br><br>
-          After making edits below, click <strong>&#8681; Export JSON</strong> &rarr; upload <code>base_map_data.json</code> to your GitHub repo &rarr; all visitors see the update within minutes.
-          <input type="url" id="ed-gh-url" placeholder="https://raw.githubusercontent.com/YOU/REPO/main/base_map_data.json">
-          <button id="ed-gh-save">Load from this URL</button>
+          <b>&#128279; GitHub Connection</b>
+          Connect once with your GitHub token to publish changes directly. Your token is only stored in this browser session.
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+            <label style="font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px">GitHub Personal Access Token</label>
+            <div style="display:flex;gap:6px">
+              <input type="password" id="ed-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;height:32px;padding:0 9px;border:1.5px solid #ffc107;border-radius:7px;font-size:12px;color:#1a1a2e;outline:none;background:#fff">
+              <button id="ed-token-save" style="height:32px;padding:0 12px;background:#2a7676;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Connect</button>
+            </div>
+            <div id="ed-token-status" style="font-size:11px;color:#856404;min-height:16px"></div>
+            <div style="font-size:11px;color:#a07000;line-height:1.5">
+              &#8505; Get a token: <strong>github.com &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic)</strong>. Give it <strong>repo</strong> scope.
+            </div>
+          </div>
         </div>
 
         <div class="ed-card">
@@ -525,6 +536,7 @@ function setupAdmin(){
   document.getElementById('ed-export').addEventListener('click',exportJSON);
   document.getElementById('ed-import-input').addEventListener('change',importJSON);
   document.getElementById('ed-q').addEventListener('input',function(){buildEdList();});
+  setupPublish();
   document.getElementById('add-h').addEventListener('click',function(){addLink('h');});
   document.getElementById('add-sc').addEventListener('click',function(){addLink('sc');});
   document.getElementById('add-fb').addEventListener('click',function(){addLink('fb');});
@@ -724,6 +736,135 @@ function importJSON(e){
     }
   );
 })();
+
+/* ═══ GITHUB PUBLISH ═══════════════════════════════════════ */
+var GH_TOKEN = '';
+
+function parseGHUrl(url) {
+  var m = url.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.+)/);
+  if (!m) return null;
+  return {owner:m[1], repo:m[2], branch:m[3], path:m[4]};
+}
+
+function showPubModal(icon, title, msg, btns, showProgress) {
+  document.getElementById('pub-icon').textContent = icon;
+  document.getElementById('pub-icon').style.color = '';
+  document.getElementById('pub-title').textContent = title;
+  document.getElementById('pub-msg').innerHTML = msg;
+  document.getElementById('pub-progress').style.display = showProgress ? 'block' : 'none';
+  document.getElementById('pub-btns').style.display = btns ? 'flex' : 'none';
+  if (btns) document.getElementById('pub-btns').innerHTML = btns;
+  document.getElementById('pub-ov').style.display = 'flex';
+}
+
+function closePubModal() { document.getElementById('pub-ov').style.display = 'none'; }
+
+function setupPublish() {
+  /* Restore token from session */
+  var saved = sessionStorage.getItem('mmap_tok');
+  if (saved) {
+    GH_TOKEN = saved;
+    document.getElementById('ed-gh-token').value = saved;
+    document.getElementById('ed-token-status').textContent = '✓ Token connected for this session';
+    document.getElementById('ed-token-status').style.color = '#27ae60';
+  }
+
+  document.getElementById('ed-token-save').addEventListener('click', function() {
+    var t = document.getElementById('ed-gh-token').value.trim();
+    if (!t) { document.getElementById('ed-token-status').textContent = 'Please enter a token'; return; }
+    GH_TOKEN = t;
+    sessionStorage.setItem('mmap_tok', t);
+    document.getElementById('ed-token-status').textContent = '✓ Connected — ready to publish';
+    document.getElementById('ed-token-status').style.color = '#27ae60';
+    showSB('GitHub token connected');
+  });
+
+  document.getElementById('ed-publish').addEventListener('click', function() {
+    if (!GH_TOKEN) {
+      document.getElementById('ed-gh-token').focus();
+      document.getElementById('ed-token-status').textContent = '⚠ Enter your GitHub token above and click Connect first';
+      document.getElementById('ed-token-status').style.color = '#c0392b';
+      showSB('Enter your GitHub token first');
+      return;
+    }
+    var info = parseGHUrl(DEFAULT_GH_URL);
+    if (!info) { showSB('Invalid GitHub URL in DEFAULT_GH_URL'); return; }
+    var cancelBtn = '<button onclick="closePubModal()" style="flex:1;height:40px;background:#f3f4f6;color:#555;border:none;border-radius:9px;font-size:14px;cursor:pointer">Cancel</button>';
+    var confirmBtn = '<button id="pub-go" style="flex:1;height:40px;background:#2a9d8f;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">&#9650; Publish</button>';
+    showPubModal(
+      '⬆',
+      'Publish to GitHub',
+      'Updates <strong>' + info.path + '</strong> in <strong>' + info.owner + '/' + info.repo + '</strong>.<br>All visitors see the new data within 1-2 minutes.',
+      cancelBtn + confirmBtn,
+      false
+    );
+    document.getElementById('pub-go').addEventListener('click', doPublish);
+  });
+}
+
+function doPublish() {
+  var info = parseGHUrl(DEFAULT_GH_URL);
+  document.getElementById('pub-btns').style.display = 'none';
+  document.getElementById('pub-progress').style.display = 'block';
+  document.getElementById('pub-progress-txt').textContent = 'Getting current file info...';
+
+  var apiUrl = 'https://api.github.com/repos/' + info.owner + '/' + info.repo + '/contents/' + info.path;
+  var hdrs = {
+    'Authorization': 'token ' + GH_TOKEN,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+  var doneBtn = '<button onclick="closePubModal()" style="flex:1;height:40px;background:#2a9d8f;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">Done</button>';
+  var closeBtn = '<button onclick="closePubModal()" style="flex:1;height:40px;background:#f3f4f6;color:#555;border:none;border-radius:9px;font-size:14px;cursor:pointer">Close</button>';
+
+  fetch(apiUrl + '?ref=' + info.branch, {headers: hdrs})
+    .then(function(r) {
+      if (r.status === 404) return {sha: null};
+      if (!r.ok) throw new Error('GitHub error ' + r.status + ' — check token has repo scope');
+      return r.json();
+    })
+    .then(function(fd) {
+      document.getElementById('pub-progress-txt').textContent = 'Uploading data...';
+      var jsonStr = JSON.stringify({bases:D, facts:F}, null, 2);
+      var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+      var body = {message:'Update base_map_data.json via admin editor', content:b64, branch:info.branch};
+      if (fd.sha) body.sha = fd.sha;
+      return fetch(apiUrl, {method:'PUT', headers:hdrs, body:JSON.stringify(body)});
+    })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e){throw new Error(e.message||'Upload failed');});
+      return r.json();
+    })
+    .then(function() {
+      document.getElementById('pub-icon').textContent = '✓';
+      document.getElementById('pub-icon').style.color = '#27ae60';
+      showPubModal('✓','Published!',
+        'Your map data is live on GitHub.<br><span style="font-size:12px;color:#aaa">Visitors will see the update within 1-2 minutes.</span>',
+        doneBtn, false);
+      showSB('✓ Published to GitHub — map is live');
+    })
+    .catch(function(err) {
+      showPubModal('✗','Publish Failed',
+        '<span style="color:#c0392b">' + err.message + '</span><br><br><span style="font-size:12px;color:#aaa">Make sure your token has <strong>repo</strong> scope.</span>',
+        closeBtn, false);
+      document.getElementById('pub-icon').style.color = '#c0392b';
+    });
+}
+
 </script>
+
+<!-- PUBLISH MODAL -->
+<div id="pub-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:6000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px 26px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:16px;text-align:center">
+    <div id="pub-icon" style="font-size:36px;margin-bottom:10px">&#9650;</div>
+    <div id="pub-title" style="font-size:16px;font-weight:600;color:#1a1a2e;margin-bottom:8px">Publish to GitHub</div>
+    <div id="pub-msg" style="font-size:13px;color:#666;line-height:1.6;margin-bottom:20px"></div>
+    <div id="pub-progress" style="display:none;margin-bottom:16px">
+      <div style="width:30px;height:30px;border:3px solid #e0e0e0;border-top-color:#2a9d8f;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>
+      <div id="pub-progress-txt" style="font-size:12px;color:#aaa">Connecting...</div>
+    </div>
+    <div id="pub-btns" style="display:flex;gap:8px"></div>
+  </div>
+</div>
 </body>
 </html>
