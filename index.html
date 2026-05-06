@@ -447,7 +447,7 @@ function render(){
 function setupPanel(){
   document.getElementById('pcls').addEventListener('click',closeP);
 }
-function openP(i){
+window.openP = function(i){
   var b=D[i];
   document.getElementById('pn').textContent=b.n;
   document.getElementById('pa').textContent=b.s||'';
@@ -468,8 +468,12 @@ function openP(i){
   if(b.fb&&b.fb.length){lEl.innerHTML=b.fb.map(function(x){return'<a href="'+x[0]+'" target="_blank" class="pl"><div class="pli" style="background:#e3f2fd;color:#1565c0">f</div><span>'+esc(x[1])+'</span></a>';}).join('');document.getElementById('ls').style.display='';}
   else document.getElementById('ls').style.display='none';
   document.getElementById('panel').classList.add('open');
-}
-function closeP(){document.getElementById('panel').classList.remove('open');}
+  setTimeout(function(){if(window._map)window._map.invalidateSize();},320);
+};
+window.closeP = function(){
+  document.getElementById('panel').classList.remove('open');
+  setTimeout(function(){if(window._map)window._map.invalidateSize();},320);
+};
 
 /* ═══ SEARCH ════════════════════════════════════════════════ */
 function setupSearch(){
@@ -705,6 +709,18 @@ function importJSON(e){
 
 /* ═══ BOOT — fetch data then start app ═════════════════════ */
 (function boot(){
+  /* Pre-populate GitHub URL field as soon as page loads */
+  var ghInput = document.getElementById('ed-gh-url');
+  if (ghInput) ghInput.value = DEFAULT_GH_URL;
+  /* Pre-populate token from session if available */
+  var savedTok = sessionStorage.getItem('mmap_tok');
+  if (savedTok) {
+    GH_TOKEN = savedTok;
+    var tokInput = document.getElementById('ed-gh-token');
+    if (tokInput) tokInput.value = savedTok;
+    var tokStatus = document.getElementById('ed-token-status');
+    if (tokStatus) { tokStatus.textContent = '✓ Token connected for this session'; tokStatus.style.color='#27ae60'; }
+  }
   var url = getGHUrl();
   if(!url){
     /* No URL set yet — show helpful message in loading screen */
