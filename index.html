@@ -248,25 +248,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 
         <!-- GitHub URL config -->
         <div id="ed-config">
-          <b>&#128279; GitHub Connection</b>
-          Connect your GitHub token once to publish changes live. Stored in this browser session only.
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-            <div>
-              <label style="display:block;font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data URL (read-only)</label>
-              <input type="text" id="ed-gh-url" readonly style="width:100%;height:30px;padding:0 8px;border:1px solid #ffc107;border-radius:7px;font-size:10.5px;color:#666;background:#fffbea;outline:none">
-            </div>
-            <div>
-              <label style="display:block;font-size:10px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Personal Access Token</label>
-              <div style="display:flex;gap:6px">
-                <input type="password" id="ed-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;height:32px;padding:0 9px;border:1.5px solid #ffc107;border-radius:7px;font-size:12px;color:#1a1a2e;outline:none;background:#fff">
-                <button id="ed-token-save" style="height:32px;padding:0 12px;background:#2a7676;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Connect</button>
-              </div>
-            </div>
-            <div id="ed-token-status" style="font-size:11px;min-height:16px"></div>
-            <div style="font-size:11px;color:#a07000;line-height:1.5">
-              &#8505; <strong>github.com &rarr; Settings &rarr; Developer settings &rarr; Personal access tokens &rarr; Tokens (classic)</strong> &rarr; give it <strong>repo</strong> scope.
-            </div>
+          <b>&#128279; GitHub Data URL</b>
+          Paste your GitHub raw JSON URL below and click Save. After editing bases, use <strong>Export JSON</strong> and upload the file to GitHub — visitors will see updates within minutes.
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+            <input type="url" id="ed-gh-url" placeholder="https://raw.githubusercontent.com/YOU/military-map/main/base_map_data.json" style="flex:1;min-width:200px;height:34px;padding:0 10px;border:1.5px solid #ffc107;border-radius:7px;font-size:12px;color:#1a1a2e;background:#fff;outline:none">
+            <button id="ed-gh-save" style="height:34px;padding:0 16px;background:#2a7676;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Save URL</button>
           </div>
+          <div id="ed-gh-status" style="font-size:11px;margin-top:6px;color:#856404"></div>
         </div>
 
         <div class="ed-card">
@@ -544,18 +532,12 @@ function setupAdmin(){
   document.getElementById('ed-save').addEventListener('click',saveBase);
   document.getElementById('ed-gh-save').addEventListener('click',function(){
     var url=document.getElementById('ed-gh-url').value.trim();
-    if(!url){showSB('Please enter a URL first'); return;}
-    /* Update in-memory URL and reload data from new source */
-    DEFAULT_GH_URL = url;
-    showSB('Fetching data from new URL...');
-    loadData(url, function(){
-      render(); buildEdList();
-      showSB('Loaded '+D.length+' bases from new URL. Export JSON and upload to GitHub to make permanent.');
-    }, function(e){
-      showSB('Could not load from that URL. Check it is correct and public.');
-    });
+    if(!url){ document.getElementById('ed-gh-status').textContent='Please paste a URL first.'; return; }
+    localStorage.setItem(GH_KEY, url);
+    document.getElementById('ed-gh-status').textContent='\u2713 URL saved! Export JSON, upload to GitHub, and your map will update for all visitors.';
+    document.getElementById('ed-gh-status').style.color='#27ae60';
+    showSB('GitHub URL saved successfully');
   });
-  /* Populate current URL */
   document.getElementById('ed-gh-url').value = DEFAULT_GH_URL;
 }
 
@@ -576,6 +558,12 @@ function openEditor(){
   edIdx=-1;buildEdList();
   document.getElementById('ed-form').classList.remove('show');
   document.getElementById('ed-mt').style.display='';
+  /* Pre-fill saved GitHub URL */
+  var saved=localStorage.getItem(GH_KEY)||'';
+  var ghInput=document.getElementById('ed-gh-url');
+  if(ghInput){ ghInput.value=saved; }
+  var ghStatus=document.getElementById('ed-gh-status');
+  if(ghStatus){ ghStatus.textContent=saved?'\u2713 URL configured — loading data from GitHub':'No URL set yet. Paste your GitHub raw JSON URL above.'; ghStatus.style.color=saved?'#27ae60':'#856404'; }
   document.getElementById('editor').classList.add('show');
 }
 
