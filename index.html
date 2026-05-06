@@ -366,9 +366,29 @@ function initApp(){
     btn.className='bb';btn.dataset.k=k;btn.textContent=v.t;
     btn.style.cssText='color:'+v.c+';border-color:'+v.c+';background:'+v.bg;
     btn.addEventListener('click',function(){
-      ACT[k]=!ACT[k];
-      btn.classList.toggle('off',!ACT[k]);
-      btn.style.cssText=ACT[k]?'color:'+v.c+';border-color:'+v.c+';background:'+v.bg:'color:#aaa;border-color:#dde1e7;background:#f7f8fa';
+      var allOn = Object.keys(BC).every(function(x){return ACT[x];});
+      var onlyMeOn = ACT[k] && Object.keys(BC).filter(function(x){return ACT[x];}).length===1;
+      if(allOn){
+        /* Solo mode: turn all OFF except clicked */
+        Object.keys(BC).forEach(function(x){ACT[x]=false;});
+        ACT[k]=true;
+      } else if(onlyMeOn){
+        /* Reset: turn all back ON */
+        Object.keys(BC).forEach(function(x){ACT[x]=true;});
+      } else {
+        /* Normal toggle */
+        ACT[k]=!ACT[k];
+        /* Safety: if last one turns off, reset all to on */
+        if(Object.keys(BC).every(function(x){return !ACT[x];})){
+          Object.keys(BC).forEach(function(x){ACT[x]=true;});
+        }
+      }
+      /* Update all button styles */
+      document.querySelectorAll('.bb').forEach(function(b){
+        var bk=b.dataset.k;var bv=BC[bk];
+        b.classList.toggle('off',!ACT[bk]);
+        b.style.cssText=ACT[bk]?'color:'+bv.c+';border-color:'+bv.c+';background:'+bv.bg:'color:#aaa;border-color:#dde1e7;background:#f7f8fa';
+      });
       render();
     });
     bfEl.appendChild(btn);
