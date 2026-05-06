@@ -10,7 +10,7 @@
 <meta property="og:title" content="Military Base Resource Map | Jorge Downie · Keller Williams Greater 360">
 <meta property="og:description" content="PCS anywhere. Find VA loan experts and MRP-certified agents at every military base in America — housing, schools, and community resources all in one map.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://raw.githubusercontent.com/jorgedowniehomes/military-map/main/preview.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/YOUR-USERNAME/military-map/main/preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Military Base Resource Map | Jorge Downie · Keller Williams Greater 360">
 <meta name="twitter:description" content="PCS anywhere. Find VA loan experts and MRP-certified agents at every military base in America — housing, schools, and community resources all in one map.">
@@ -321,7 +321,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 /* ═══ CONFIG ════════════════════════════════════════════════ */
 var GH_KEY = 'milmap_gh_url';
 /* Default URL — user replaces this with their own GitHub raw URL */
-var DEFAULT_GH_URL = 'https://raw.githubusercontent.com/jorgedowniehomes/military-map/main/base_map_data.json';
+/* GitHub raw URL — used only for the Publish button to push updates */
+var GH_RAW_URL = 'https://raw.githubusercontent.com/jorgedowniehomes/military-map/main/base_map_data.json';
+/* Relative URL — fetches from same GitHub Pages domain, no CORS issues */
+var DEFAULT_GH_URL = './base_map_data.json';
 
 /* ═══ BRANCH CONFIG ════════════════════════════════════════ */
 var BC = {
@@ -375,6 +378,7 @@ function loadData(url, onSuccess, onError){
 }
 
 function initApp(){
+  if (window._mapReady) return; window._mapReady = true;
   /* Hide loading, show map */
   document.getElementById('loading').style.display='none';
 
@@ -719,7 +723,7 @@ function importJSON(e){
 (function boot(){
   /* Pre-populate fields immediately */
   var ghInput = document.getElementById('ed-gh-url');
-  if (ghInput) ghInput.value = DEFAULT_GH_URL;
+  if (ghInput) ghInput.value = GH_RAW_URL;
   var savedTok = sessionStorage.getItem('mmap_tok');
   if (savedTok) {
     GH_TOKEN = savedTok;
@@ -748,7 +752,7 @@ function importJSON(e){
     })
     .catch(function(e){
       /* Silently fail — embedded data already showing */
-      console.warn('GitHub fetch failed, using embedded data:', e.message);
+      console.warn('Background refresh failed (using embedded data):', e.message);
     });
 })();
 
@@ -802,7 +806,7 @@ function setupPublish() {
       showSB('Enter your GitHub token first');
       return;
     }
-    var info = parseGHUrl(DEFAULT_GH_URL);
+    var info = parseGHUrl(GH_RAW_URL);
     if (!info) { showSB('Invalid GitHub URL in DEFAULT_GH_URL'); return; }
     var cancelBtn = '<button onclick="closePubModal()" style="flex:1;height:40px;background:#f3f4f6;color:#555;border:none;border-radius:9px;font-size:14px;cursor:pointer">Cancel</button>';
     var confirmBtn = '<button id="pub-go" style="flex:1;height:40px;background:#2a9d8f;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">&#9650; Publish</button>';
@@ -818,7 +822,7 @@ function setupPublish() {
 }
 
 function doPublish() {
-  var info = parseGHUrl(DEFAULT_GH_URL);
+  var info = parseGHUrl(GH_RAW_URL);
   document.getElementById('pub-btns').style.display = 'none';
   document.getElementById('pub-progress').style.display = 'block';
   document.getElementById('pub-progress-txt').textContent = 'Getting current file info...';
